@@ -1,0 +1,70 @@
+version: '3'
+
+services:
+  minio:
+    container_name: minio-container
+    image: quay.io/minio/minio
+    env_file: 
+      - .env
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - './data:/data'
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 25s
+      retries: 5
+  
+  # this is a init container to download stock data from yahoo (see defaults in .env and python scripts)
+  download_stocks:
+    container_name: download_stocks
+    image: python
+    restart: no
+    env_file: 
+      - .env
+    volumes:
+      - './stock-data:/stock-data'
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/bash -c "
+      if [ -z $${DOWNLOAD_STOCK_DATA} ] ; then echo 'skipping download'; exit 1; fi;
+      cd /stock-data;
+      python3 ./download-nasdaq-historical-data.py;
+      "
+  
+  # this is an init container to create minio bucket and to upload stock data (see defaults in .env)
+  # runs only if python container ran successfully x`
+  stocks_to_minio:
+    container_name: stocks_to_minio
+    image: minio/mc
+    restart: no
+    env_file: 
+      - .env
+    volumes:
+      - './stock-data:/stock-data'
+    depends_on:
+      download_stocks:
+        condition: service_completed_successfully
+    entrypoint: >
+      /bin/bash -c "
+      cd /stock-data;
+      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc admin user svcacct add --access-key $${MINIO_ACCESS_KEY} --secret-key $${MINIO_SECRET_KEY} myminio minio;
+      mc mb myminio/$${MINIO_BUCKET_RAW};
+      mc mb myminio/$${MINIO_BUCKET_PROCESSED};
+      mc cp --recursive /stock-data/hist/ myminio/$${MINIO_BUCKET_RAW}/hist/;
+      mc cp /stock-data/symbols_valid_meta.csv myminio/$${MINIO_BUCKET_RAW};
+      mc cp /stock-data/nasdaq_definitions.json myminio/$${MINIO_BUCKET_RAW};
+      rm -rf /stock-data/hist;
+      rm -rf /stock-data/symbols_valid_meta.csv
+      "
+
+networks:
+  default:
+    name: examplenet

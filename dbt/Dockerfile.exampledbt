@@ -1,0 +1,8 @@
+ARG build_for=linux/arm64
+
+FROM --platform=${build_for} ghcr.io/dbt-labs/dbt-postgres:1.7.6
+
+COPY ./exampledbt /usr/app
+COPY ./profiles.yml /root/.dbt/
+
+# Default entrypoint is ["dbt"]

@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  spark-connect:
+    build:
+      context: .
+      args:
+        - build_for=linux/arm64
+    container_name: spark_connect_container
+    env_file:
+      - .env
+    user: root # doesn't write without root
+    ports:
+      - '15002:15002'
+    entrypoint: "/opt/bitnami/spark/sbin/start-connect-server.sh --jars /opt/bitnami/spark/jars/spark-connect_2.12-3.5.0.jar,/opt/bitnami/spark/jars/hadoop-aws-3.3.4.jar,/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.12.262.jar --conf spark.hadoop.fs.s3a.path.style.access=true --conf spark.hadoop.fs.s3a.endpoint=${MINIO_ENDPOINT} --conf spark.hadoop.fs.s3a.access.key=${MINIO_ACCESS_KEY} --conf spark.hadoop.fs.s3a.secret.key=${MINIO_SECRET_KEY} --conf spark.hadoop.fs.s3a.connection.ssl.enabled=false --conf spark.jars.ivy=/opt/bitnami/spark/ivy"
+
+networks:
+  default:
+    name: examplenet

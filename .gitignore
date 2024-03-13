@@ -1,0 +1,13 @@
+/*
+!.gitignore
+!/spark-connect/
+!/postgres-data/
+/minio/data
+!/minio/
+!/dbt/
+!/dbt/exampledbt/
+/airflow/logs/
+/airflow/dags/__pycache__/
+!/airflow/
+!README.md
+.DS_Store

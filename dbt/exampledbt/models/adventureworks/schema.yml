@@ -1,0 +1,40 @@
+
+version: 2
+
+models:
+  - name: salesorderheader
+    description: "Sales Order Header"
+    columns:
+      - name: salesorderid
+        description: "The primary key for this table"
+        tests:
+          - unique
+          - not_null
+      - name: orderdate
+        description: "Order Date"
+        tests:
+          - not_null
+
+  - name: salesorderdetail
+    description: "Sales Order Details"
+    columns:
+      - name: salesorderid
+        description: "The first part of primary key for this table"
+        tests:
+          - not_null
+      - name: salesorderdetailid
+        description: "The second part of primary key for this table"
+        tests:
+          - not_null
+      - name: productid
+        description: "Product ID"
+        tests:
+          - not_null
+
+  - name: category_details
+    description: "Breakdown by category"
+
+  - name: monthly_order_average
+    description: "Breakdown by month"
+  - name: territory_details
+    description: "Breakdown by territory"

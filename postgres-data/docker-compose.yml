@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  postgres-data:
+    image: postgres:16
+    container_name: postgres_data
+    ports:
+      - "15432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres-data-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # populates the database with adventureworks data (see ./import-scripts)
+  psql-init:
+    image: postgres:16
+    container_name: psql_init
+    env_file:
+      - .env
+    restart: no
+    volumes:
+      - ./import-scripts/:/import-scripts/
+    depends_on:
+      postgres-data:
+        condition: service_healthy
+    entrypoint: >
+      /bin/bash -c "
+      cd /import-scripts;
+      psql -d postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@postgres-data -c 'CREATE DATABASE $${POSTGRES_DB};';
+      psql -d postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@postgres-data/$${POSTGRES_DB} < install.sql;
+      "
+
+
+volumes:
+  postgres-data-volume:
+
+networks:
+  default:
+    name: examplenet
